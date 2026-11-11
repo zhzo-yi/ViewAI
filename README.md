@@ -29,6 +29,17 @@
 
 </div>
 
+> **本仓库版本说明**
+>
+> 这是在原项目基础上做了三项扩展的版本，均已实测跑通：
+>
+> 1. **LLM 换成 DeepSeek 官方 API**（`deepseek-flash` / `deepseek-v4-pro`），不再依赖硅基流动的代理；
+> 2. **ASR 与 Embedding 支持阿里云百炼**（`qwen3-asr-flash` / `text-embedding-v4`），
+>    并与原硅基流动实现通过 `ASR_PROVIDER` / `EMBEDDING_PROVIDER` 切换，默认行为不变；
+> 3. **支持纯音频上传**（mp3 / wav / m4a …），自动跳过抽帧与 OCR，只走 ASR，其余链路完全复用。
+>
+> 另附一份可复现的基准测量（28 次跑批 + 3 项质量实测）：见 [docs/benchmark](docs/benchmark/README.md)。
+
 ## 项目预览
 
 **登录与注册**
@@ -153,7 +164,7 @@ sequenceDiagram
 | API | Java 21、Spring Boot 3.5.9、Undertow、MyBatis-Plus | 鉴权、媒体管理、任务编排与 REST API |
 | 异步与缓存 | RocketMQ 5.3.4、Redis 7.4、Redisson | 异步削峰、状态缓存、限流、锁与消费幂等 |
 | 数据与存储 | MySQL 8、MinIO、Qdrant | 业务数据、视频对象、Checkpoint 与向量检索 |
-| 视频与 AI | FFmpeg、Tesseract、LangChain4j、DeepSeek、TeleSpeechASR、BGE-M3 | 音视频处理、多模态解析、Agent 推理与 Embedding |
+| 视频与 AI | FFmpeg、Tesseract、LangChain4j、DeepSeek、Qwen3-ASR、text-embedding-v4 | 音视频处理、多模态解析、Agent 推理与 Embedding |
 | 部署 | Docker Compose | 本地中间件编排 |
 
 ## 本地运行
@@ -185,19 +196,32 @@ tesseract --version
 cp .env.example .env
 ```
 
-编辑 `.env`，至少替换数据库、Redis、MinIO、Qdrant 的示例密码并设置 `SILICONFLOW_API_KEY`。全新数据库中 `DB_USERNAME` 与 `MYSQL_APP_USER` 应保持一致；`MYSQL_ROOT_PASSWORD` 仅供数据库初始化使用。密钥只保存在本地 `.env`，不要提交到仓库。
+编辑 `.env`，至少替换数据库、Redis、MinIO、Qdrant 的示例密码。全新数据库中 `DB_USERNAME` 与 `MYSQL_APP_USER` 应保持一致；`MYSQL_ROOT_PASSWORD` 仅供数据库初始化使用。密钥只保存在本地 `.env`，不要提交到仓库。
 
-默认 LLM 为 `deepseek-ai/DeepSeek-V3.2`。历史示例模型 `deepseek-ai/DeepSeek-R1-Distill-Qwen-32B` 已被硅基流动禁用，会返回 `Model disabled`。`LLM_TIMEOUT_SECONDS` 默认是 `300`，用于避免长视频证据分析在模型响应尚未返回时过早超时；模型或超时配置变更后需要重启后端。
+本版本默认使用 **DeepSeek 官方 API** 作为 LLM。变量名沿用了历史命名（仍叫 `SILICONFLOW_*`），实际填写 DeepSeek 的值：
+
+```env
+SILICONFLOW_API_KEY=sk-xxxxxxxx                  # DeepSeek 的 Key
+SILICONFLOW_BASE_URL=https://api.deepseek.com/v1
+LLM_MODEL=deepseek-flash                         # 或 deepseek-v4-pro
+AGENT_MAX_DURATION_MS=600000                     # V4 系列推理更慢，沿用原 120000 会中途预算耗尽
+AGENT_MAX_ESTIMATED_TOKENS=200000
+```
+
+DeepSeek 官方当前提供 `deepseek-flash`（V4.1-Flash）与 `deepseek-v4-pro`（V4-Pro）两个模型。
+同一段素材实测：`deepseek-flash` 约 113 s、`deepseek-v4-pro` 约 510 s，日常用 flash 即可，需要更强推理时再切 pro。
+
+若想继续用硅基流动，把上面三个变量换回 `https://api.siliconflow.cn/v1` 与 `deepseek-ai/DeepSeek-V3.2` 即可，代码无需改动。
 
 #### ASR 与 Embedding 服务商
 
 LLM 走的是 OpenAI 兼容协议，改 `SILICONFLOW_BASE_URL` 与 `LLM_MODEL` 即可指向任意兼容服务。
 ASR 与 Embedding 的服务商则通过两个变量分别选择，两者可以独立切换：
 
-| 变量 | 可选值 | 默认 | 使用的模型配置 |
+| 变量 | 可选值 | 本版本默认 | 使用的模型配置 |
 | :--- | :--- | :--- | :--- |
-| `ASR_PROVIDER` | `siliconflow` / `bailian` | `siliconflow` | `ASR_MODEL` 或 `ALIYUN_ASR_MODEL` |
-| `EMBEDDING_PROVIDER` | `siliconflow` / `bailian` | `siliconflow` | `EMBEDDING_MODEL` 或 `ALIYUN_EMBEDDING_MODEL` |
+| `ASR_PROVIDER` | `siliconflow` / `bailian` | `bailian` | `ASR_MODEL` 或 `ALIYUN_ASR_MODEL` |
+| `EMBEDDING_PROVIDER` | `siliconflow` / `bailian` | `bailian` | `EMBEDDING_MODEL` 或 `ALIYUN_EMBEDDING_MODEL` |
 
 选择 `bailian`（阿里云百炼）时需要额外配置：
 
@@ -207,6 +231,10 @@ ALIYUN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 ALIYUN_ASR_MODEL=qwen3-asr-flash
 ALIYUN_EMBEDDING_MODEL=text-embedding-v4
 ```
+
+如果想完全回到原项目的硅基流动方案，把两个 provider 都设为 `siliconflow` 并配置
+`SILICONFLOW_API_KEY` / `ASR_URL` / `ASR_MODEL` / `EMBEDDING_MODEL` 即可，两套实现通过
+`@ConditionalOnProperty` 互斥装配，不会冲突。
 
 两种服务商的调用方式不同：硅基流动的 ASR 是 OpenAI 风格的 `/audio/transcriptions` 多段表单直传音频文件；
 百炼没有该接口，音频要转成 base64 data URI 走 `chat/completions` 的 `input_audio` 消息，
@@ -266,7 +294,9 @@ npm run dev
 | 后端无法连接 MySQL 或 Redis | 运行 `docker compose --env-file .env ps`，确认服务健康且 `.env` 密码一致 |
 | 页面提示无法连接后端 | 先访问 `/health`；再检查 `VITE_DEV_PROXY_TARGET` 或 `VITE_API_BASE_URL` |
 | 视频解析提示命令不存在 | 确认 `ffmpeg`、`tesseract` 可在终端执行，必要时配置 `FFMPEG_DIR`、`OCR_COMMAND` |
-| AI 接口返回 401 或模型不可用 | 检查 `SILICONFLOW_API_KEY` 与模型名称，修改后重启后端 |
+| AI 接口返回 401 或 `Token is invalid` | LLM 检查 `SILICONFLOW_API_KEY` 与 `SILICONFLOW_BASE_URL` 是否匹配（DeepSeek Key 配硅基流动地址必然 401）；ASR/Embedding 检查对应 provider 的 Key 是否齐全 |
+| 启动报「需要配置 ALIYUN_API_KEY」 | `ASR_PROVIDER` 或 `EMBEDDING_PROVIDER` 设成了 `bailian` 但没填 `ALIYUN_API_KEY`；补 Key 或改回 `siliconflow` |
+| 分析中途提示「已达到本次任务预算」 | V4 系列模型推理更慢，调大 `AGENT_MAX_DURATION_MS`（建议 600000）与 `AGENT_MAX_ESTIMATED_TOKENS` |
 | Maven 提示 `maven-default-http-blocker` | 在 `server` 目录执行 `./mvnw -s .mvn/central-settings.xml spring-boot:run`，临时绕过失效的用户级镜像 |
 
 停止本地中间件：
@@ -277,12 +307,28 @@ docker compose --env-file .env down
 
 该命令不会删除 `mysql/data`、`redis/data`、`minio/data`、`qdrant/data` 或 RocketMQ 命名卷。需要完全重置时请先备份，再使用 `docker compose --env-file .env down --volumes` 并手动清理这些数据目录。
 
+## 基准与指标
+
+仓库内附一份可复现的测量结果（28 次冷路径分析 + 3 项质量实测，未改动产品代码）：
+
+| 素材时长 | 样本 | P50 | P95 | Critic 通过率 | 平均成本 |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| 35 s | 20 | 157 s | 205 s | 12/20 | $0.0068 |
+| 5 min | 5 | 178 s | 样本不足 | 2/5 | $0.0076 |
+| 15 min | 3 | 223 s | 样本不足 | 2/3 | $0.0088 |
+
+三条主要结论：耗时几乎与视频长度无关（瓶颈是固定的 4–6 次大模型调用）；
+成本由固定开销主导（`≈ $0.0067 + $0.000133 × 分钟`）；并发重复提交只触发一次分析。
+
+完整数据、指标定义与复现脚本见 [docs/benchmark](docs/benchmark/README.md)。
+
 ## 目录结构
 
 ```text
 DoVideoAI
 ├── client/              # Vue 3 工作台
 ├── server/              # Spring Boot API 与 Video Agent
+├── docs/benchmark/      # 基准测量：脚本、原始数据、指标卡与结论
 ├── rocketmq/            # Broker 配置
 ├── docker-compose.yml   # 中间件编排
 └── .env.example         # 本地配置模板

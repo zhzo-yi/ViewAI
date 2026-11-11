@@ -1,0 +1,62 @@
+{
+  "resume": {
+    "totalChunks": 10,
+    "uploadId": "e3b774a0-92e0-44a3-8f1a-7c3c8ee7a6bf",
+    "chunksUploadedBeforeInterrupt": 6,
+    "statusAfterInterrupt": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "statusAfterDuplicateChunk": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "duplicateChunkDidNotDoubleCount": true,
+    "statusAfterResume": 10,
+    "completeHttp": 200,
+    "mediaId": 10,
+    "md5Expected": "0896b67506b45187a2f7f6d70a68ea6e",
+    "md5Stored": "0896b67506b45187a2f7f6d70a68ea6e",
+    "md5Match": true,
+    "rowsWithSameFilename": "1",
+    "minioObjectsForThisUpload": ""
+  },
+  "concurrentComplete": {
+    "results": [
+      {
+        "http": 409,
+        "code": 40900,
+        "mediaId": null,
+        "message": "该上传任务正在合并中，请稍后重试"
+      },
+      {
+        "http": 200,
+        "code": 0,
+        "mediaId": 11,
+        "message": "success"
+      }
+    ],
+    "rowsWithSameFilename": "1",
+    "onlyOneRecord": true
+  },
+  "concurrentAnalysis": {
+    "httpCodes": [
+      409,
+      202
+    ],
+    "finalState": "COMPLETED",
+    "startEventsDelta": 1,
+    "modelCalls": 5,
+    "tokensIn": 10340,
+    "tokensOut": 5786,
+    "note": "one START event + 单份 token 视为幂等生效"
+  }
+}
