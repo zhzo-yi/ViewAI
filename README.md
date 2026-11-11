@@ -1,5 +1,5 @@
 <div align="center">
-  <h2>DoVideoAI</h2>
+  <h2>ViewAI</h2>
   
   <p>
     <a href="https://github.com/Xiaoc7r/DOVideo-AI/stargazers"><img src="https://img.shields.io/github/stars/Xiaoc7r/DOVideo-AI?style=flat-square" alt="GitHub Stars"></a>
@@ -323,7 +323,7 @@ docker compose --env-file .env down
 ## 目录结构
 
 ```text
-DoVideoAI
+ViewAI
 ├── client/              # Vue 3 工作台
 ├── server/              # Spring Boot API 与 Video Agent
 ├── docs/benchmark/      # 基准测量：脚本、原始数据、指标卡与结论
