@@ -22,7 +22,7 @@
 
 <div align="center">
 
-[![Star History Chart](https://star-history.dera.page/svg?repos=Xiaoc7r/DOVideo-AI&type=Date)](https://star-history.dera.page/#Xiaoc7r/DOVideo-AI&Date)
+
 
 </div>
 
@@ -31,11 +31,9 @@
 
 > **本仓库版本说明**
 >
-> 这是在原项目基础上做了三项扩展的版本，均已实测跑通：
 >
 > 1. **LLM 换成 DeepSeek 官方 API**（`deepseek-flash` / `deepseek-v4-pro`），不再依赖硅基流动的代理；
 > 2. **ASR 与 Embedding 支持阿里云百炼**（`qwen3-asr-flash` / `text-embedding-v4`），
->    并与原硅基流动实现通过 `ASR_PROVIDER` / `EMBEDDING_PROVIDER` 切换，默认行为不变；
 > 3. **支持纯音频上传**（mp3 / wav / m4a …），自动跳过抽帧与 OCR，只走 ASR，其余链路完全复用。
 >
 > 另附一份可复现的基准测量（28 次跑批 + 3 项质量实测）：见 [docs/benchmark](docs/benchmark/README.md)。
