@@ -13,3 +13,5 @@ redis/data/
 qdrant/data/
 minio/data/
  
+__pycache__/
+*.pyc
